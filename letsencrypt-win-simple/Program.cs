@@ -24,6 +24,13 @@ namespace LetsEncrypt.ACME.Simple
 {
     class Program
     {
+	    private enum DialogResult
+	    {
+		    Yes, 
+			No, 
+			None
+	    }
+
         private const string ClientName = "letsencrypt-win-simple";
         private static string _certificateStore = "WebHosting";
         public static float RenewalPeriod = 60;
@@ -35,7 +42,8 @@ namespace LetsEncrypt.ACME.Simple
         private static AcmeClient _client;
         public static Options Options;
 	    private static bool myIsSilentMode;
-
+	    private static DialogResult myReplaceDialogResult = DialogResult.None;
+		
 	    static bool IsElevated
             => new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
@@ -434,16 +442,29 @@ namespace LetsEncrypt.ACME.Simple
                 Path.GetInvalidFileNameChars()
                     .Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
 
-        public static bool PromptYesNo()
+        public static bool PromptYesNo(bool saveOrLoadReply = false)
         {
+	        if (saveOrLoadReply && myReplaceDialogResult != DialogResult.None)
+	        {
+		        if (myReplaceDialogResult == DialogResult.Yes)
+			        return true;
+		        return false;
+	        }
+
             while (true)
             {
                 var response = Console.ReadKey(true);
-                if (response.Key == ConsoleKey.Y)
-                    return true;
-                if (response.Key == ConsoleKey.N)
-                    return false;
-                Console.WriteLine("Please press Y or N.");
+	            if (response.Key == ConsoleKey.Y)
+	            {
+					myReplaceDialogResult = DialogResult.Yes;
+		            return true;
+	            }
+	            if (response.Key == ConsoleKey.N)
+	            {
+		            myReplaceDialogResult = DialogResult.No;
+		            return false;
+	            }
+	            Console.WriteLine("Please press Y or N.");
             }
         }
 
@@ -801,7 +822,7 @@ namespace LetsEncrypt.ACME.Simple
                 {
                     addTask = false;
                     Console.WriteLine($"\nDo you want to replace the existing {taskName} task? (Y/N) ");
-                    if (!PromptYesNo())
+                    if (!PromptYesNo(true))
                         return;
                     addTask = true;
                     Console.WriteLine($" Deleting existing Task {taskName} from Windows Task Scheduler.");
