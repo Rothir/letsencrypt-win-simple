@@ -17,6 +17,8 @@ using System.Security.Cryptography;
 using ACMESharp.ACME;
 using Serilog;
 using System.Text;
+using System.Text.RegularExpressions;
+using Amazon.Runtime.Internal;
 
 namespace LetsEncrypt.ACME.Simple
 {
@@ -32,12 +34,22 @@ namespace LetsEncrypt.ACME.Simple
         private static Settings _settings;
         private static AcmeClient _client;
         public static Options Options;
+	    private static bool myIsSilentMode;
 
-        static bool IsElevated
+	    static bool IsElevated
             => new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
         private static void Main(string[] args)
         {
+			List<string> arguments = new List<string>(args);
+
+	        if (arguments.Any(item => item.Contains("silent")))
+	        {
+		        myIsSilentMode = true;
+		        arguments.Remove(arguments.First(item => item.Contains("silent")));
+		        args = arguments.ToArray();
+	        }
+
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.AppSettings()
                 .CreateLogger();
@@ -343,13 +355,22 @@ namespace LetsEncrypt.ACME.Simple
                             Console.WriteLine(" A: Get certificates for all hosts");
                             Console.WriteLine(" Q: Quit");
                             Console.Write("Which host do you want to get a certificate for: ");
-                            var response = Console.ReadLine().ToLowerInvariant();
+	                        string response;
+	                        response = !myIsSilentMode ? Console.ReadLine().ToLowerInvariant() : "a";
+
                             switch (response)
                             {
                                 case "a":
                                     foreach (var target in targets)
                                     {
-                                        target.Plugin.Auto(target);
+	                                    try
+	                                    {
+		                                    target.Plugin.Auto(target);
+	                                    }
+	                                    catch
+	                                    {
+		                                    Log.Error($"Site {target.Host} with id {target.SiteId} failed!");
+	                                    }
                                     }
                                     break;
                                 case "q":
@@ -407,8 +428,8 @@ namespace LetsEncrypt.ACME.Simple
             Console.WriteLine("Press enter to continue.");
             Console.ReadLine();
         }
-
-        private static string CleanFileName(string fileName)
+		
+		private static string CleanFileName(string fileName)
             =>
                 Path.GetInvalidFileNameChars()
                     .Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
