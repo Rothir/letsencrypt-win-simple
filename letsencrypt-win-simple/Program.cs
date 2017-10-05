@@ -394,6 +394,37 @@ namespace LetsEncrypt.ACME.Simple
                                             binding.Plugin.Auto(binding);
                                         }
                                     }
+									else if (Regex.IsMatch(response, @"(\d+ )+\d+"))
+									{
+										string[] sites = response.Split(' ');
+
+										foreach (var site in sites)
+										{
+											int siteId = 0;
+											try
+											{
+												siteId = Convert.ToInt32(site);
+												if (!Options.San)
+												{
+													siteId--;
+													if (siteId >= 0 && siteId < targets.Count)
+													{
+														var binding = targets[siteId];
+														binding.Plugin.Auto(binding);
+													}
+												}
+												else
+												{
+													var binding = targets.First(t => t.SiteId == siteId);
+													binding.Plugin.Auto(binding);
+												}
+
+											}
+											catch
+											{
+												 Log.Error("Renew for site " + siteId + " failed!");
+											}}
+										}
                                     else
                                     {
                                         foreach (var plugin in Target.Plugins.Values)
