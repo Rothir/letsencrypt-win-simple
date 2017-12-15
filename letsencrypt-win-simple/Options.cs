@@ -19,7 +19,10 @@ namespace LetsEncrypt.ACME.Simple
         [Option(HelpText = "A host name to manually get a certificate for. --webroot must also be set.")]
         public string ManualHost { get; set; }
 
-        [Option(Default = "%SystemDrive%\\inetpub\\wwwroot",
+	    [Option(HelpText = "Show all IIS bindings including the number containing this string. (Affected by 'San' option)")]
+	    public string ListFiltered { get; set; }
+
+		[Option(Default = "%SystemDrive%\\inetpub\\wwwroot",
             HelpText = "A web root for the manual host name for authentication.")]
         public string WebRoot { get; set; }
 

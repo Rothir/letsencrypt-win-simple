@@ -259,7 +259,17 @@ namespace LetsEncrypt.ACME.Simple
                             }
                         }
 
-                        if (targets.Count == 0 && string.IsNullOrEmpty(Options.ManualHost))
+	                    if (!String.IsNullOrEmpty(Options.ListFiltered))
+	                    {
+		                    var filteredTargets = targets.Where(target => target.Host.Contains(Options.ListFiltered)).ToList();
+
+		                    Console.WriteLine("Showing all matching bindings: (matching '" + filteredTargets.Count + "' of a total of '" + targets.Count + "' targets)");
+		                    Console.WriteLine();
+		                    WriteAllTargetsToConsole(filteredTargets);
+		                    return;
+	                    }
+
+						if (targets.Count == 0 && string.IsNullOrEmpty(Options.ManualHost))
                         {
                             Console.WriteLine("No targets found.");
                             Log.Error("No targets found.");
@@ -331,18 +341,8 @@ namespace LetsEncrypt.ACME.Simple
                             }
                             else
                             {
-                                foreach (var binding in targets)
-                                {
-                                    if (!Options.San)
-                                    {
-                                        Console.WriteLine($" {count}: {binding}");
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($" {binding.SiteId}: SAN - {binding}");
-                                    }
-                                    count++;
-                                }
+								count = WriteAllTargetsToConsole(targets);
+                                
                             }
                         }
 
@@ -467,8 +467,26 @@ namespace LetsEncrypt.ACME.Simple
             Console.WriteLine("Press enter to continue.");
             Console.ReadLine();
         }
-		
-		private static string CleanFileName(string fileName)
+
+	    private static int WriteAllTargetsToConsole(List<Target> targets)
+	    {
+		    int count = 1;
+			foreach (var binding in targets)
+			{
+				if (!Options.San)
+				{
+					Console.WriteLine($" {count}: {binding}");
+				}
+				else
+				{
+					Console.WriteLine($" {binding.SiteId}: SAN - {binding}");
+				}
+				count++;
+			}
+		    return count;
+	    }
+
+	    private static string CleanFileName(string fileName)
             =>
                 Path.GetInvalidFileNameChars()
                     .Aggregate(fileName, (current, c) => current.Replace(c.ToString(), string.Empty));
